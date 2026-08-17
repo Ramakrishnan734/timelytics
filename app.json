@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Timelytics",
+    "slug": "timelytics",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#13131b",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.timelytics.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#13131b",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.timelytics.app",
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

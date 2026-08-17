@@ -1,0 +1,397 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+View,
+Text,
+ScrollView,
+TouchableOpacity,
+ActivityIndicator,
+StyleSheet,
+RefreshControl,
+} from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+
+import { Colors } from '../../constants/colors';
+import { Spacing, Radius } from '../../constants/spacing';
+import { logOut } from '../../services/authService';
+import { getExpenses, Expense } from '../../services/expenseService';
+import { CATEGORIES, CategoryKey } from '../../constants/categories';
+import useAuth from '../../hooks/useAuth';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Returns today's date as 'YYYY-MM-DD' in local time */
+function todayString(): string {
+const d = new Date();
+const y = d.getFullYear();
+const m = String(d.getMonth() + 1).padStart(2, '0');
+const day = String(d.getDate()).padStart(2, '0');
+return `${y}-${m}-${day}`;
+}
+
+/** Returns current month prefix as 'YYYY-MM' */
+function monthPrefix(): string {
+return todayString().slice(0, 7);
+}
+
+/** Format a rupee amount — no decimals for whole numbers */
+function formatINR(amount: number): string {
+if (amount === 0) return '₹0';
+return `₹${Math.round(amount).toLocaleString('en-IN')}`;
+}
+
+// ---------------------------------------------------------------------------
+// Calculation functions (pure — easy to test and explain)
+// ---------------------------------------------------------------------------
+
+function calcTodayTotal(expenses: Expense[]): number {
+const today = todayString();
+return expenses
+.filter(e => e.date === today)
+.reduce((sum, e) => sum + e.amount, 0);
+}
+
+function calcMonthTotal(expenses: Expense[]): number {
+const prefix = monthPrefix();
+return expenses
+.filter(e => e.date.startsWith(prefix))
+.reduce((sum, e) => sum + e.amount, 0);
+}
+
+/** Returns per-category totals for the current month, sorted descending */
+function calcCategoryTotals(expenses: Expense[]): { key: CategoryKey; label: string; total: number }[] {
+const prefix = monthPrefix();
+const monthExpenses = expenses.filter(e => e.date.startsWith(prefix));
+
+// Accumulate totals per category
+const totals: Partial<Record<CategoryKey, number>> = {};
+for (const e of monthExpenses) {
+totals[e.category] = (totals[e.category] ?? 0) + e.amount;
+}
+
+// Map to array, attach label, sort descending
+return CATEGORIES
+.map(c => ({ key: c.key, label: c.label, total: totals[c.key] ?? 0 }))
+.filter(c => c.total > 0)
+.sort((a, b) => b.total - a.total);
+}
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+interface StatCardProps {
+title: string;
+value: string;
+subtitle?: string;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle }) => (
+<View style={styles.statCard}>
+<Text style={styles.statTitle}>{title}</Text>
+<Text style={styles.statValue}>{value}</Text>
+{subtitle ? <Text style={styles.statSubtitle}>{subtitle}</Text> : null}
+</View>
+);
+
+interface CategoryBarProps {
+label: string;
+total: number;
+maxTotal: number;
+}
+
+const CategoryBar: React.FC<CategoryBarProps> = ({ label, total, maxTotal }) => {
+const fillRatio = maxTotal > 0 ? total / maxTotal : 0;
+
+return (
+<View style={styles.barRow}>
+<Text style={styles.barLabel} numberOfLines={1}>{label}</Text>
+<View style={styles.barTrack}>
+<View style={[styles.barFill, { flex: fillRatio }]} />
+<View style={{ flex: 1 - fillRatio }} />
+</View>
+<Text style={styles.barAmount}>{formatINR(total)}</Text>
+</View>
+);
+};
+
+// ---------------------------------------------------------------------------
+// Main screen
+// ---------------------------------------------------------------------------
+
+const DashboardScreen: React.FC = () => {
+const { user } = useAuth();
+
+const [expenses, setExpenses] = useState<Expense[]>([]);
+const [loading, setLoading] = useState(true);
+const [refreshing, setRefreshing] = useState(false);
+const [error, setError] = useState<string | null>(null);
+const [signingOut, setSigningOut] = useState(false);
+
+const loadExpenses = useCallback(async () => {
+if (!user) return;
+try {
+const data = await getExpenses(user.uid);
+setExpenses(data);
+setError(null);
+} catch {
+setError('Could not load expenses. Pull down to retry.');
+}
+}, [user]);
+
+useEffect(() => {
+setLoading(true);
+loadExpenses().finally(() => setLoading(false));
+}, [loadExpenses]);
+
+useFocusEffect(
+useCallback(() => {
+loadExpenses();
+}, [loadExpenses])
+);
+
+const onRefresh = useCallback(async () => {
+setRefreshing(true);
+await loadExpenses();
+setRefreshing(false);
+}, [loadExpenses]);
+
+const handleSignOut = async () => {
+setSigningOut(true);
+try {
+await logOut();
+} catch {
+setSigningOut(false);
+}
+};
+
+const todayTotal = calcTodayTotal(expenses);
+const monthTotal = calcMonthTotal(expenses);
+const categoryTotals = calcCategoryTotals(expenses);
+const highestCat = categoryTotals[0] ?? null;
+const maxCatTotal = highestCat?.total ?? 0;
+
+if (loading) {
+return (
+<View style={styles.centered}>
+<ActivityIndicator size="large" color={Colors.primary} />
+</View>
+);
+}
+
+return (
+<ScrollView
+style={styles.screen}
+contentContainerStyle={styles.content}
+refreshControl={
+<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} colors={[Colors.primary]} />
+}
+>
+<View style={styles.header}>
+<Text style={styles.headerTitle}>Dashboard</Text>
+<TouchableOpacity onPress={handleSignOut} disabled={signingOut} style={styles.signOutBtn} accessibilityLabel="Sign out" >
+{signingOut
+? <ActivityIndicator size="small" color={Colors.danger} />
+: <Text style={styles.signOutText}>Sign Out</Text>
+}
+</TouchableOpacity>
+</View>
+
+  {error ? (
+    <View style={styles.errorBanner}>
+      <Text style={styles.errorText}>{error}</Text>
+    </View>
+  ) : null}
+
+  <View style={styles.statsRow}>
+    <StatCard title="Today" value={formatINR(todayTotal)} />
+    <StatCard title="This Month" value={formatINR(monthTotal)} />
+  </View>
+
+  <View style={styles.section}>
+    <Text style={styles.sectionTitle}>Highest Category</Text>
+    {highestCat ? (
+      <View style={styles.highestCard}>
+        <Text style={styles.highestLabel}>{highestCat.label}</Text>
+        <Text style={styles.highestAmount}>{formatINR(highestCat.total)}</Text>
+      </View>
+    ) : (
+      <Text style={styles.emptyText}>No expenses this month</Text>
+    )}
+  </View>
+
+  <View style={styles.section}>
+    <Text style={styles.sectionTitle}>Category Breakdown</Text>
+    {categoryTotals.length > 0 ? (
+      categoryTotals.map(cat => (
+        <CategoryBar
+          key={cat.key}
+          label={cat.label}
+          total={cat.total}
+          maxTotal={maxCatTotal}
+        />
+      ))
+    ) : (
+      <Text style={styles.emptyText}>No expenses this month</Text>
+    )}
+  </View>
+</ScrollView>
+
+);
+};
+
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
+
+const styles = StyleSheet.create({
+screen: {
+flex: 1,
+backgroundColor: Colors.background,
+},
+content: {
+padding: Spacing.marginMobile,
+paddingBottom: Spacing.xxl,
+},
+centered: {
+flex: 1,
+backgroundColor: Colors.background,
+alignItems: 'center',
+justifyContent: 'center',
+},
+header: {
+flexDirection: 'row',
+alignItems: 'center',
+justifyContent: 'space-between',
+marginBottom: Spacing.lg,
+paddingTop: Spacing.lg,
+},
+headerTitle: {
+color: Colors.textPrimary,
+fontSize: 22,
+fontWeight: '700',
+},
+signOutBtn: {
+paddingVertical: 8,
+paddingHorizontal: 16,
+borderRadius: Radius.base,
+borderWidth: 1,
+borderColor: Colors.danger,
+minWidth: 80,
+alignItems: 'center',
+},
+signOutText: {
+color: Colors.danger,
+fontSize: 14,
+fontWeight: '600',
+},
+errorBanner: {
+backgroundColor: Colors.errorContainer,
+borderRadius: Radius.base,
+padding: Spacing.md,
+marginBottom: Spacing.md,
+},
+errorText: {
+color: Colors.onErrorContainer,
+fontSize: 13,
+},
+statsRow: {
+flexDirection: 'row',
+gap: Spacing.gutter,
+marginBottom: Spacing.lg,
+},
+statCard: {
+flex: 1,
+backgroundColor: Colors.surfaceContainer,
+borderRadius: Radius.lg,
+padding: Spacing.md,
+},
+statTitle: {
+color: Colors.textSecondary,
+fontSize: 12,
+fontWeight: '500',
+marginBottom: 4,
+textTransform: 'uppercase',
+letterSpacing: 0.5,
+},
+statValue: {
+color: Colors.textPrimary,
+fontSize: 22,
+fontWeight: '700',
+},
+statSubtitle: {
+color: Colors.textSecondary,
+fontSize: 12,
+marginTop: 2,
+},
+section: {
+marginBottom: Spacing.lg,
+},
+sectionTitle: {
+color: Colors.textSecondary,
+fontSize: 13,
+fontWeight: '600',
+textTransform: 'uppercase',
+letterSpacing: 0.5,
+marginBottom: Spacing.sm,
+},
+emptyText: {
+color: Colors.outline,
+fontSize: 14,
+textAlign: 'center',
+paddingVertical: Spacing.lg,
+},
+highestCard: {
+backgroundColor: Colors.surfaceContainerHigh,
+borderRadius: Radius.lg,
+padding: Spacing.md,
+flexDirection: 'row',
+alignItems: 'center',
+justifyContent: 'space-between',
+},
+highestLabel: {
+color: Colors.textPrimary,
+fontSize: 16,
+fontWeight: '600',
+},
+highestAmount: {
+color: Colors.primary,
+fontSize: 18,
+fontWeight: '700',
+},
+barRow: {
+flexDirection: 'row',
+alignItems: 'center',
+marginBottom: Spacing.sm,
+gap: Spacing.sm,
+},
+barLabel: {
+color: Colors.textSecondary,
+fontSize: 13,
+width: 80,
+},
+barTrack: {
+flex: 1,
+flexDirection: 'row',
+height: 10,
+borderRadius: Radius.full,
+backgroundColor: Colors.surfaceContainerHigh,
+overflow: 'hidden',
+},
+barFill: {
+backgroundColor: Colors.primaryContainer,
+borderRadius: Radius.full,
+},
+barAmount: {
+color: Colors.textPrimary,
+fontSize: 13,
+fontWeight: '600',
+width: 68,
+textAlign: 'right',
+},
+});
+
+export default DashboardScreen;
+
+
