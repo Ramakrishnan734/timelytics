@@ -67,7 +67,7 @@ const SplashScreen: React.FC = () => {
         <Text style={styles.appName}>Timelytics</Text>
 
         {/* Tagline */}
-        <Text style={styles.tagline}>Track time. Spend wisely.</Text>
+        <Text style={styles.tagline}>Track time. Spend wisely. Improve your day </Text>
       </Animated.View>
 
       {/* Bottom version */}
