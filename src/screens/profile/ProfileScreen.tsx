@@ -95,6 +95,7 @@ const ProfileScreen: React.FC = () => {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.loadingText}>Loading profile…</Text>
       </View>
     );
   }
@@ -105,10 +106,13 @@ const ProfileScreen: React.FC = () => {
   if (error || !profile) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>{error ?? 'Unable to load profile.'}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadProfile}>
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
+        <View style={styles.errorCard}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorText}>{error ?? 'Unable to load profile.'}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadProfile}>
+            <Text style={styles.retryText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity
           style={styles.signOutButton}
@@ -137,40 +141,59 @@ const ProfileScreen: React.FC = () => {
       {/* ── Header ── */}
       <View style={styles.header}>
         <Text style={styles.screenTitle}>Profile</Text>
+        <Text style={styles.screenSubtitle}>@{profile.username}</Text>
       </View>
 
-      {/* ── Avatar + name ── */}
-      <View style={styles.avatarSection}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarInitial}>{getInitial(profile.username)}</Text>
+      {/* ── Hero card: Avatar + name ── */}
+      <View style={styles.heroCard}>
+        <View style={styles.avatarRing}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarInitial}>{getInitial(profile.username)}</Text>
+          </View>
         </View>
+        <Text style={styles.displayName}>{profile.displayName || profile.username}</Text>
         <Text style={styles.username}>@{profile.username}</Text>
         <Text style={styles.email}>{profile.email}</Text>
       </View>
+
+      {/* ── Section: Account Info ── */}
+      <Text style={styles.sectionHeader}>ACCOUNT INFO</Text>
 
       {/* ── Info card ── */}
       <View style={styles.card}>
 
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Display Name</Text>
+          <View style={styles.rowLabelGroup}>
+            <Text style={styles.rowEmoji}>👤</Text>
+            <Text style={styles.rowLabel}>Display Name</Text>
+          </View>
           <Text style={styles.rowValue}>{profile.displayName || profile.username}</Text>
         </View>
 
         <View style={styles.divider} />
 
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Currency</Text>
+          <View style={styles.rowLabelGroup}>
+            <Text style={styles.rowEmoji}>💰</Text>
+            <Text style={styles.rowLabel}>Currency</Text>
+          </View>
           <Text style={styles.rowValue}>{profile.currency}</Text>
         </View>
 
         <View style={styles.divider} />
 
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Member Since</Text>
+          <View style={styles.rowLabelGroup}>
+            <Text style={styles.rowEmoji}>📅</Text>
+            <Text style={styles.rowLabel}>Member Since</Text>
+          </View>
           <Text style={styles.rowValue}>{formatDate(profile.createdAt)}</Text>
         </View>
 
       </View>
+
+      {/* ── Section: Account ── */}
+      <Text style={styles.sectionHeader}>ACCOUNT</Text>
 
       {/* ── Sign Out ── */}
       <TouchableOpacity
@@ -209,6 +232,7 @@ const styles = StyleSheet.create({
     alignItems:      'center',
     justifyContent:  'center',
     padding:         Spacing.lg,
+    gap:             Spacing.lg,
   },
 
   // Header
@@ -220,30 +244,52 @@ const styles = StyleSheet.create({
     ...Typography.headlineLgMobile,
     color: Colors.textPrimary,
   },
-
-  // Avatar section
-  avatarSection: {
-    alignItems:    'center',
-    marginBottom:  Spacing.xl,
+  screenSubtitle: {
+    ...Typography.bodyMd,
+    color:   Colors.textSecondary,
+    marginTop: Spacing.xs,
   },
-  avatar: {
-    width:           72,
-    height:          72,
-    borderRadius:    Radius.full,
-    backgroundColor: Colors.primaryContainer,
+
+  // Hero card
+  heroCard: {
+    backgroundColor: Colors.surfaceContainerHigh,
+    borderRadius:    Radius.xl,
+    padding:         Spacing.xl,
+    alignItems:      'center',
+    marginBottom:    Spacing.xl,
+  },
+  avatarRing: {
+    width:           100,
+    height:          100,
+    borderRadius:    50,
+    borderWidth:     2,
+    borderColor:     Colors.primary,
     alignItems:      'center',
     justifyContent:  'center',
     marginBottom:    Spacing.md,
   },
+  avatar: {
+    width:           88,
+    height:          88,
+    borderRadius:    44,
+    backgroundColor: Colors.primaryContainer,
+    alignItems:      'center',
+    justifyContent:  'center',
+  },
   avatarInitial: {
     ...Typography.titleLg,
     color:      Colors.onPrimaryContainer,
-    fontSize:   28,
-    lineHeight: 34,
+    fontSize:   32,
+    lineHeight: 38,
   },
-  username: {
+  displayName: {
     ...Typography.titleLg,
     color:        Colors.textPrimary,
+    marginBottom: Spacing.xs,
+  },
+  username: {
+    ...Typography.bodyMd,
+    color:        Colors.primary,
     marginBottom: Spacing.xs,
   },
   email: {
@@ -251,18 +297,39 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
 
+  // Section headers
+  sectionHeader: {
+    ...Typography.bodyMd,
+    color:         Colors.textSecondary,
+    fontSize:      11,
+    letterSpacing: 1.2,
+    fontWeight:    '600',
+    marginBottom:  Spacing.sm,
+    marginLeft:    Spacing.xs,
+  },
+
   // Info card
   card: {
     backgroundColor: Colors.surfaceContainerHigh,
     borderRadius:    Radius.xl,
-    padding:         Spacing.lg,
+    paddingVertical:   Spacing.sm,
+    paddingHorizontal: Spacing.lg,
     marginBottom:    Spacing.xl,
   },
   row: {
-    flexDirection:  'row',
-    justifyContent: 'space-between',
-    alignItems:     'center',
-    paddingVertical: Spacing.sm,
+    flexDirection:   'row',
+    justifyContent:  'space-between',
+    alignItems:      'center',
+    paddingVertical: Spacing.md,
+  },
+  rowLabelGroup: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           Spacing.sm,
+  },
+  rowEmoji: {
+    fontSize:   16,
+    lineHeight: 20,
   },
   rowLabel: {
     ...Typography.bodyMd,
@@ -270,7 +337,7 @@ const styles = StyleSheet.create({
   },
   rowValue: {
     ...Typography.bodyMd,
-    color:     Colors.textPrimary,
+    color:      Colors.textPrimary,
     fontWeight: '500',
     flexShrink: 1,
     textAlign:  'right',
@@ -291,7 +358,6 @@ const styles = StyleSheet.create({
     alignSelf:         'center',
     minWidth:          160,
     alignItems:        'center',
-    marginTop:         Spacing.sm,
   },
   signOutText: {
     ...Typography.bodyLg,
@@ -299,7 +365,27 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
+  // Loading
+  loadingText: {
+    ...Typography.bodyMd,
+    color:     Colors.textSecondary,
+    marginTop: Spacing.md,
+  },
+
   // Error state
+  errorCard: {
+    backgroundColor: Colors.surfaceContainerHigh,
+    borderRadius:    Radius.xl,
+    padding:         Spacing.xl,
+    alignItems:      'center',
+    borderWidth:     1,
+    borderColor:     Colors.errorContainer,
+    width:           '100%',
+  },
+  errorIcon: {
+    fontSize:     32,
+    marginBottom: Spacing.md,
+  },
   errorText: {
     ...Typography.bodyMd,
     color:        Colors.textSecondary,
@@ -310,12 +396,12 @@ const styles = StyleSheet.create({
     paddingVertical:   Spacing.sm,
     paddingHorizontal: Spacing.lg,
     borderRadius:      Radius.lg,
-    backgroundColor:   Colors.surfaceContainerHigh,
-    marginBottom:      Spacing.xl,
+    backgroundColor:   Colors.surfaceContainerHighest,
   },
   retryText: {
     ...Typography.bodyMd,
-    color: Colors.primary,
+    color:      Colors.primary,
+    fontWeight: '500',
   },
 });
 

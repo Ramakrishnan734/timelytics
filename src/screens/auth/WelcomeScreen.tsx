@@ -42,13 +42,7 @@ const WelcomeScreen: React.FC = () => {
             <Text style={styles.heroSymbol}>⏱</Text>
           </View>
 
-          {/* Floating stat chips */}
-          <View style={[styles.chip, styles.chipTopLeft]}>
-            <Text style={styles.chipText}>₹12,450 saved</Text>
-          </View>
-          <View style={[styles.chip, styles.chipBottomRight]}>
-            <Text style={styles.chipText}>4h 20m focused</Text>
-          </View>
+
         </View>
 
         {/* Text */}
@@ -144,29 +138,6 @@ const styles = StyleSheet.create({
   heroSymbol: {
     fontSize: 42,
   },
-  chip: {
-    position:        'absolute',
-    backgroundColor: Colors.surfaceContainerHigh,
-    borderRadius:    Radius.full,
-    paddingHorizontal: Spacing.md,
-    paddingVertical:   6,
-    borderWidth:     1,
-    borderColor:     Colors.outlineVariant,
-  },
-  chipTopLeft: {
-    top:  30,
-    left: 16,
-  },
-  chipBottomRight: {
-    bottom: 30,
-    right:  16,
-  },
-  chipText: {
-    color:    Colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-
   // ── Text ──────────────────────────────────────────────────────────────────
   textArea: {
     alignItems:   'center',

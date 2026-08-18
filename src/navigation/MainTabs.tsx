@@ -13,6 +13,7 @@
  */
 
 import React from 'react';
+import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import DashboardScreen        from '../screens/home/DashboardScreen';
@@ -52,11 +53,56 @@ const MainTabs: React.FC = () => {
         },
       }}
     >
-      <Tab.Screen name="Home"      component={DashboardScreen}        options={{ tabBarLabel: 'Home' }}      />
-      <Tab.Screen name="Expenses"  component={ExpensesStack}          options={{ tabBarLabel: 'Expenses' }}  />
-      <Tab.Screen name="Budget"    component={BudgetManagementScreen} options={{ tabBarLabel: 'Budget' }}    />
-      <Tab.Screen name="Stopwatch" component={StopwatchScreen}        options={{ tabBarLabel: 'Stopwatch' }} />
-      <Tab.Screen name="Profile"   component={ProfileScreen}          options={{ tabBarLabel: 'Profile' }}   />
+      <Tab.Screen
+        name="Home"
+        component={DashboardScreen}
+        options={{
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 20, color }}>🏠</Text>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Expenses"
+        component={ExpensesStack}
+        options={{
+          tabBarLabel: 'Expenses',
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 20, color }}>💸</Text>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Budget"
+        component={BudgetManagementScreen}
+        options={{
+          tabBarLabel: 'Budget',
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 20, color }}>🎯</Text>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Stopwatch"
+        component={StopwatchScreen}
+        options={{
+          tabBarLabel: 'Stopwatch',
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 20, color }}>⏱</Text>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          tabBarLabel: 'Profile',
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 20, color }}>👤</Text>
+          ),
+        }}
+      />
     </Tab.Navigator>
   );
 };
