@@ -31,7 +31,7 @@ export interface SessionLap {
 export interface StopwatchSession {
   id:        string;   // Firestore document ID
   uid:       string;   // owner's Firebase Auth UID
-  label:     string;   // always "Session" for now
+  label:     string;   // activity name — e.g. "Coding", "Study", "Session"
   duration:  number;   // total elapsed time in ms
   laps:      SessionLap[];
   startedAt: number;   // epoch ms — when the stopwatch was first started
@@ -60,7 +60,6 @@ export async function saveSession(
   const payload: SessionInput = {
     ...data,
     uid,
-    label:   'Session',
     savedAt: now,
   };
   const ref = await addDoc(sessionsCol(uid), payload);
