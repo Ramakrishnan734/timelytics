@@ -16,6 +16,8 @@ import {
   getDocs,
   query,
   orderBy,
+  doc,
+  deleteDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -64,6 +66,18 @@ export async function saveSession(
   };
   const ref = await addDoc(sessionsCol(uid), payload);
   return { id: ref.id, ...payload };
+}
+
+// ---------------------------------------------------------------------------
+// Delete a session by Firestore document ID
+// ---------------------------------------------------------------------------
+
+export async function deleteSession(
+  uid:       string,
+  sessionId: string,
+): Promise<void> {
+  const ref = doc(db, 'users', uid, 'sessions', sessionId);
+  await deleteDoc(ref);
 }
 
 // ---------------------------------------------------------------------------

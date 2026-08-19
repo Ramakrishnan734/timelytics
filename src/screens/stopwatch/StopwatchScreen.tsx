@@ -37,6 +37,7 @@ import { Spacing, Radius } from '../../constants/spacing';
 import {
   saveSession,
   getSessions,
+  deleteSession,
   StopwatchSession,
   SessionLap,
 } from '../../services/sessionService';
@@ -219,12 +220,14 @@ const LapRow: React.FC<LapRowProps> = ({ lap, total }) => (
   </View>
 );
 
-/** Session history card — now shows label with emoji */
+/** Session history card — shows label with emoji, lap count, and delete action */
 interface SessionCardProps {
-  session: StopwatchSession;
+  session:   StopwatchSession;
+  onDelete:  () => void;
+  deleting:  boolean;
 }
 
-const SessionCard: React.FC<SessionCardProps> = ({ session }) => {
+const SessionCard: React.FC<SessionCardProps> = ({ session, onDelete, deleting }) => {
   const lapCount = session.laps.length;
   const lapText  =
     lapCount === 0 ? 'No laps' :
@@ -233,7 +236,7 @@ const SessionCard: React.FC<SessionCardProps> = ({ session }) => {
   const emoji = labelToEmoji(session.label);
 
   return (
-    <View style={styles.sessionCard}>
+    <View style={[styles.sessionCard, deleting && styles.sessionCardDeleting]}>
       <View style={styles.sessionLeft}>
         <View style={styles.sessionLabelRow}>
           <Text style={styles.sessionLabelEmoji}>{emoji}</Text>
@@ -244,6 +247,18 @@ const SessionCard: React.FC<SessionCardProps> = ({ session }) => {
       </View>
       <View style={styles.sessionRight}>
         <Text style={styles.sessionLapCount}>{lapText}</Text>
+        <TouchableOpacity
+          style={[styles.deleteBtn, deleting && styles.btnDisabled]}
+          onPress={onDelete}
+          disabled={deleting}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          {deleting
+            ? <ActivityIndicator size="small" color={Colors.danger} />
+            : <Text style={styles.deleteBtnText}>Delete</Text>
+          }
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -399,6 +414,7 @@ const StopwatchScreen: React.FC = () => {
   const [sessions,       setSessions]       = useState<StopwatchSession[]>([]);
   const [loadingHistory, setLoadingHistory] = useState<boolean>(false);
   const [saving,         setSaving]         = useState<boolean>(false);
+  const [deletingId,     setDeletingId]     = useState<string | null>(null);
 
   const isSavingRef = useRef<boolean>(false);
 
@@ -559,6 +575,41 @@ const StopwatchScreen: React.FC = () => {
   }
 
   // -------------------------------------------------------------------------
+  // Session deletion
+  // -------------------------------------------------------------------------
+
+  function handleDeleteSession(session: StopwatchSession): void {
+    if (!user) return;
+
+    Alert.alert(
+      'Delete this session?',
+      `"${session.label}" (${formatTime(session.duration)}) will be permanently deleted. This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text:    'Delete',
+          style:   'destructive',
+          onPress: async () => {
+            setDeletingId(session.id);
+            try {
+              await deleteSession(user.uid, session.id);
+              setSessions(prev => prev.filter(s => s.id !== session.id));
+            } catch {
+              Alert.alert(
+                'Delete Failed',
+                'Could not delete this session. Please try again.',
+                [{ text: 'OK' }],
+              );
+            } finally {
+              setDeletingId(null);
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  // -------------------------------------------------------------------------
   // Derived state
   // -------------------------------------------------------------------------
 
@@ -629,7 +680,7 @@ const StopwatchScreen: React.FC = () => {
                   >
                     {saving
                       ? <ActivityIndicator color={Colors.danger} size="small" />
-                      : <Text style={[styles.secondaryBtnText, styles.resetText]}>Reset</Text>}
+                      : <Text style={[styles.secondaryBtnText, styles.resetText]}>END</Text>}
                   </TouchableOpacity>
                 </View>
               </>
@@ -660,7 +711,7 @@ const StopwatchScreen: React.FC = () => {
                   >
                     {saving
                       ? <ActivityIndicator color={Colors.danger} size="small" />
-                      : <Text style={[styles.secondaryBtnText, styles.resetText]}>Reset</Text>}
+                      : <Text style={[styles.secondaryBtnText, styles.resetText]}>END</Text>}
                   </TouchableOpacity>
                 </View>
               </>
@@ -700,7 +751,12 @@ const StopwatchScreen: React.FC = () => {
           </View>
         ) : (
           sessions.map(session => (
-            <SessionCard key={session.id} session={session} />
+            <SessionCard
+              key={session.id}
+              session={session}
+              onDelete={() => handleDeleteSession(session)}
+              deleting={deletingId === session.id}
+            />
           ))
         )}
       </View>
@@ -1026,11 +1082,31 @@ const styles = StyleSheet.create({
   },
   sessionRight: {
     alignItems: 'flex-end',
+    gap:        Spacing.sm,
   },
   sessionLapCount: {
     color:      Colors.textSecondary,
     fontSize:   13,
     fontWeight: '500',
+  },
+  sessionCardDeleting: {
+    opacity: 0.5,
+  },
+  deleteBtn: {
+    paddingVertical:   4,
+    paddingHorizontal: 10,
+    borderRadius:      Radius.full,
+    borderWidth:       1,
+    borderColor:       Colors.danger,
+    minWidth:          56,
+    alignItems:        'center',
+    justifyContent:    'center',
+    minHeight:         28,
+  },
+  deleteBtnText: {
+    color:      Colors.danger,
+    fontSize:   12,
+    fontWeight: '600',
   },
 
   // ── Centered loading state ─────────────────────────────────────────────
