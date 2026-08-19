@@ -1,287 +1,368 @@
-# Timelytics — Context Snapshot
-> Auto-generated at the end of each Claude session.  
-> **Purpose:** If token budget runs out or the next session has no prior context, read this file + `AI_DEVELOPMENT_LOG.md` + `TIMELYTICS_HANDOFF.md` to resume from the exact checkpoint.  
-> **Last updated:** 2026-08-16 — Session 3, Prompt 1 (Firebase Android fix applied)
+# Timelytics — Current Project Context
+
+> **Purpose:** This is the current master context for Timelytics development. Read this file together with `AI_DEVELOPMENT_LOG.md` when starting a new AI-assisted development session.
+>
+> **Last updated:** Session 18 — final project context checkpoint
 
 ---
 
-## Current Checkpoint
+## 1. Project Overview
 
-| Field | Value |
-|---|---|
-| Step | **Step 2 complete — Real Authentication** (Firebase Android fix also applied) |
-| FIREBASE_TEST_MODE | `false` in `App.tsx` — normal auth flow active |
-| Auth screens | **All implemented** (Splash, Welcome, Login, SignUp, ForgotPassword) |
-| Feature screens | All **placeholders** (Dashboard, Expenses, Budget, Analytics, Stopwatch, Productivity, Profile) |
-| Services | `authService.ts` + `userService.ts` are real; all feature services are stubs |
-| Firebase Storage | **Deferred** — do not enable until billing is sorted |
-| Firebase Firestore init | `initializeFirestore(app, { experimentalForceLongPolling: true })` ✅ |
-| authService signUp order | Firebase Auth FIRST, then Firestore pre-flight checks ✅ |
+**Timelytics** is a mobile Expense Tracker + Stopwatch/Productivity application built for the **3rd-year Mobile App Development – AI Build Round**.
 
----
+The application is a **mobile app**, not a web application.
 
-## ⚠️ Physical Device Testing Status
+### Required 3rd-Year Features
 
-**Samsung A55 testing: NOT YET PERFORMED.**  
-Developer must run `npm install`, `npx tsc --noEmit`, `npx expo-doctor`, then test on device.
+The app must provide all 2nd-year Expense Tracker requirements plus:
 
----
+- Stopwatch
+- Start
+- Pause
+- Resume
+- Lap
+- Previous stopwatch session/history
 
-## Immediate Next Task
-
-**Step 3 — Home / Dashboard**
-
-Connect `DashboardScreen.tsx` to real Firestore data. Display:
-- Monthly spending total (sum of current month's expenses for the user)
-- Budget progress (current spend vs budget)
-- Today's productivity time (sum of today's sessions)
-- Recent expenses (last 3–5 from Firestore)
-- Highest spending category
-
-Rules:
-- Do NOT hard-code demo data once real Firestore integration begins
-- expenseService.ts and budgetService.ts stubs must be implemented to support this
-- Preserve Stitch UI layout for Dashboard exactly
+The current implementation also includes named stopwatch sessions and saved-session deletion.
 
 ---
 
-## Authentication Architecture (implemented in Step 2, fixed in Session 3)
+## 2. Technology Stack
 
-### Firestore schema
+- React Native
+- Expo
+- TypeScript / TSX
+- Firebase Authentication
+- Cloud Firestore
+- React Navigation
+- Android testing on a physical Samsung A55
+- Git/GitHub
 
-```
-users/{uid}
-  uid:         string       — Firebase Auth UID
-  username:    string       — lowercase unique handle
-  email:       string       — real email (for password reset only)
-  createdAt:   Timestamp
-  updatedAt:   Timestamp
-  currency:    string       — default 'INR'
-  displayName: string       — defaults to username
-
-usernames/{username}
-  uid: string               — maps username → uid (O(1) lookup)
-```
-
-### Sign Up flow (CURRENT — Auth before Firestore)
-```
-User enters: username + realEmail + password + confirm
-  → createUserWithEmailAndPassword(auth, realEmail, password)   ← FIRST
-  → isUsernameTaken(username)          [Firestore check; rollback Auth if taken]
-  → isEmailTaken(email)                [Firestore check; rollback Auth if taken]
-  → createUserProfile(uid, username, email)  [atomic Firestore transaction]
-  → useAuth detects session → App.tsx renders MainTabs
-```
-
-### Login flow
-```
-User enters username
-  → resolveUsernameToEmail(username)   [Firestore: usernames/{username} → uid → users/{uid}.email]
-  → signInWithEmailAndPassword(auth, realEmail, password)
-  → useAuth detects session → App.tsx renders MainTabs
-```
-
-### Forgot Password flow
-```
-User enters username
-  → resolveUsernameToEmail(username)
-  → sendPasswordResetEmail(auth, realEmail)
-  → Success screen shown (email not revealed to user)
-```
-
-### Passwords
-**Never stored in Firestore. Firebase Auth owns all credentials.**
+No new packages were added for the latest features.
 
 ---
 
-## Key File States (Session 3 changes highlighted)
+## 3. AI / Design Tools Used
 
-### `src/services/firebase.ts` ✅ CHANGED (Session 3)
-```ts
-// Firestore init — forces long-polling for Android compatibility
-export const db: Firestore = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-});
-```
+### Google Stitch
+Used during the initial design phase to provide the UI/UX design source and visual reference for Timelytics.
 
-### `src/services/authService.ts` ✅ CHANGED (Session 3)
-- `signUp`: Auth user created FIRST, Firestore checks SECOND
-- Rollback (Auth user deleted) if username taken, email taken, or profile write fails
-- `createUserProfile` transaction still enforces uniqueness atomically
+### Claude
+Used as the primary AI development assistant for:
+- Architecture planning
+- Source-code inspection
+- Feature implementation
+- Firebase/Firestore implementation
+- Debugging
+- UI polish
+- Testing/checkpoint reports
+- Documentation
 
----
+### ChatGPT
+Used for:
+- Development planning
+- Debugging/reasoning assistance
+- Git workflow guidance
+- Testing/checkpoint guidance
+- Reviewing AI-generated implementation plans
+- Preparing prompts for Claude
 
-## Project Structure (as of Session 3)
+The developer reviewed, manually adjusted, and tested AI-generated work before accepting changes.
 
-```
-timelytics/
-├── App.tsx                              ← FIREBASE_TEST_MODE = false ✅
-├── index.ts
-├── app.json
-├── package.json
-├── .env                                 ← Developer fills in real Firebase config
-├── AI_DEVELOPMENT_LOG.md               ← Always update after every session
-├── context.md                           ← This file — regenerate at end of session
-│
-├── assets/
-│
-└── src/
-    ├── components/
-    │   └── common/
-    │       └── AuthInput.tsx            ← ✅ REAL: shared input for auth screens
-    │
-    ├── constants/
-    │   ├── colors.ts                    ← All color tokens
-    │   ├── typography.ts               ← Sora + Inter (system fonts until polished)
-    │   ├── spacing.ts                  ← 8px grid + border radii
-    │   └── categories.ts              ← 7 expense categories
-    │
-    ├── hooks/
-    │   └── useAuth.ts                  ← Auth state hook (unchanged)
-    │
-    ├── navigation/
-    │   ├── AuthStack.tsx               ← Splash/Welcome/Login/SignUp/ForgotPassword (unchanged)
-    │   └── MainTabs.tsx                ← Home/Expenses/Stopwatch/Productivity/Profile (unchanged)
-    │
-    ├── services/
-    │   ├── firebase.ts                 ← ✅ CHANGED: initializeFirestore + experimentalForceLongPolling
-    │   ├── authService.ts              ← ✅ CHANGED: Auth first, Firestore checks second
-    │   ├── userService.ts              ← ✅ REAL: createUserProfile/resolveUsernameToEmail/isUsernameTaken/isEmailTaken
-    │   ├── expenseService.ts           ← STUB
-    │   ├── budgetService.ts            ← STUB
-    │   ├── sessionService.ts           ← STUB
-    │   └── storageService.ts           ← STUB (Storage deferred)
-    │
-    └── screens/
-        ├── auth/
-        │   ├── FirebaseTestScreen.tsx  ← Keep (Step 1 tool, FIREBASE_TEST_MODE=true to re-run)
-        │   ├── SplashScreen.tsx        ← ✅ REAL
-        │   ├── WelcomeScreen.tsx       ← ✅ REAL
-        │   ├── LoginScreen.tsx         ← ✅ REAL
-        │   ├── SignUpScreen.tsx         ← ✅ REAL
-        │   └── ForgotPasswordScreen.tsx← ✅ REAL
-        ├── home/
-        │   └── DashboardScreen.tsx     ← PLACEHOLDER → implement in Step 3
-        ├── expenses/
-        │   ├── AddExpenseScreen.tsx    ← PLACEHOLDER
-        │   ├── ExpenseDetailsScreen.tsx← PLACEHOLDER
-        │   └── ExpensesHistoryScreen.tsx← PLACEHOLDER
-        ├── budget/
-        │   ├── BudgetManagementScreen.tsx  ← PLACEHOLDER
-        │   └── SpendingAnalyticsScreen.tsx ← PLACEHOLDER
-        ├── stopwatch/
-        │   └── StopwatchScreen.tsx     ← PLACEHOLDER
-        ├── productivity/
-        │   ├── ProductivityHubScreen.tsx   ← PLACEHOLDER
-        │   └── IntegratedHistoryScreen.tsx ← PLACEHOLDER
-        └── profile/
-            └── ProfileScreen.tsx       ← PLACEHOLDER (logout not yet wired)
-```
+See `AI_DEVELOPMENT_LOG.md` for the detailed AI development history and prompts.
 
 ---
 
-## Packages Installed (as of Session 3)
+## 4. Current Application Status
 
-No new packages added in Session 3.
+### Authentication
+- Sign Up → complete
+- Login → complete
+- Username-based login → complete
+- Forgot Password → complete
+- Logout → complete
+- Firebase Auth persistence → complete
+- User profiles stored in Firestore → complete
 
-Still to install when needed:
-```bash
-npx expo install @expo/vector-icons          # For Material Icons (Steps 3+)
-npx expo install @expo-google-fonts/sora @expo-google-fonts/inter expo-font  # Typography polish
-```
+### Expense Tracker
+- Add expenses → complete
+- Amount/category/date/description → complete
+- Expense history → complete
+- Edit expenses → complete
+- Delete expenses → complete
+- Filter/sort → complete
+- Today's expense calculation → complete
+- Monthly expense calculation → complete
+- Highest spending category → complete
+- Category breakdown visualization → complete
+- Monthly budget → complete
+- Amount spent/remaining → complete
+- Firestore persistence → complete
 
----
+### Stopwatch / Productivity
+- Start → complete
+- Pause → complete
+- Resume → complete
+- Lap → complete
+- End workflow → complete
+- Named sessions → complete
+- Session history → complete
+- Saved session deletion → complete
+- Firestore persistence → complete
 
-## Key Design Tokens (quick reference)
-
-```ts
-Colors.background          = '#13131b'   // Dark app background
-Colors.surfaceContainer    = '#1f1f27'   // Cards
-Colors.surfaceContainerHigh= '#292932'   // Elevated cards / inputs
-Colors.textPrimary         = '#e4e1ed'   // Primary text
-Colors.textSecondary       = '#c7c4d7'   // Secondary/muted text
-Colors.primary             = '#c0c1ff'   // Active, CTAs, links (electric indigo)
-Colors.primaryContainer    = '#8083ff'   // Button fills
-Colors.onPrimary           = '#1000a9'   // Text on primary buttons
-Colors.warning             = '#ffb783'   // Amber
-Colors.danger              = '#ffb4ab'   // Red — errors, delete
-Colors.outline             = '#908fa0'   // Borders, placeholders
-Colors.outlineVariant      = '#464554'   // Subtle dividers
-Colors.errorContainer      = '#93000a'   // Error background
-
-Spacing.marginMobile  = 20   // Screen horizontal margin
-Spacing.md            = 16   // Standard padding
-Spacing.lg            = 24   // Card padding / section gap
-Radius.lg             = 16   // Inputs, buttons
-Radius.xl             = 24   // Large cards
-```
-
----
-
-## Architecture Rules (never break)
-
-1. Screens NEVER import from `firebase/*` directly — use `src/services/` only
-2. Firebase initialized once in `firebase.ts` with `getApps()` guard
-3. Auth state owned by `useAuth` hook — single source of truth
-4. React Navigation (stack + tabs) — do NOT switch to Expo Router
-5. `EXPO_PUBLIC_` prefix for all env vars
-6. Firebase Storage = off until explicitly enabled by developer
-7. Username UI → resolved to real email internally (userService handles this)
-8. Passwords are NEVER stored in Firestore
-9. Firestore initialized with `experimentalForceLongPolling: true` for Android compat
+### Profile
+- Username → complete
+- Email → complete
+- Display name → complete
+- Currency → complete
+- Member Since → complete
+- Sign Out → complete
+- Loading state → polished
+- Error state → polished
 
 ---
 
-## Implementation Order (remaining steps)
+## 5. UI / Visual Polish Status
 
-| Step | Feature | Status |
-|---|---|---|
-| 1 | Foundation + Firebase setup | ✅ Done |
-| 2 | Real Authentication | ✅ Done |
-| 2b | Firebase Android long-polling fix | ✅ Done (Session 3) |
-| 3 | Home/Dashboard (real Firestore data) | 🔲 Next |
-| 4 | Expenses (CRUD + Firestore) | 🔲 |
-| 5 | Budgets | 🔲 |
-| 6 | Analytics | 🔲 |
-| 7 | Stopwatch + Productivity | 🔲 |
-| 8 | Profile + Settings | 🔲 |
-| 9 | Integration | 🔲 |
-| 10 | Testing + Polish | 🔲 |
+Completed:
 
----
+- Dashboard UI polish
+- Expenses UI polish
+- Budget UI polish
+- Stopwatch UI polish
+- Profile UI polish
+- Bottom navigation icons
+- Welcome screen cleanup
+- Consistent semantic colors
+- Consistent typography/spacing/radius tokens
+- Improved loading/error states
 
-## Firestore Security Rules (must configure before production)
+### Welcome Screen
 
-Current: Firestore is in test mode (rules may allow all reads/writes).  
-Before going to production, set rules like:
+The following hardcoded demo statistics were removed:
 
-```firestore-rules
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-    }
-    match /usernames/{username} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-  }
-}
-```
+- `₹12,450 saved`
+- `4h 20m focused`
+
+They were static strings and were not connected to real user data. They were removed rather than replaced with fake data.
+
+### Splash Screen
+
+No major change required after the polish review.
 
 ---
 
-## How This File Is Maintained
+## 6. Stopwatch Session Deletion — Latest Feature
 
-At the end of every Claude session (or when token limit approaches):
-1. Claude updates `AI_DEVELOPMENT_LOG.md` with the session entry
-2. Claude regenerates this `context.md` to reflect the new current state
-3. Both files are included in the next session's ZIP/handoff
+### Files Changed
 
-If a session ends abruptly, the next session should:
-1. Read this file
-2. Read `AI_DEVELOPMENT_LOG.md`
-3. Read `TIMELYTICS_HANDOFF.md`
-4. Inspect changed files to verify actual state
-5. Resume from the checkpoint described above
+- `src/services/sessionService.ts`
+- `src/screens/stopwatch/StopwatchScreen.tsx`
+
+### Implementation
+
+`deleteSession(uid, sessionId)` uses:
+
+`deleteDoc(doc(db, 'users', uid, 'sessions', sessionId))`
+
+The UI:
+
+- Provides a delete action for saved sessions.
+- Shows a confirmation dialog.
+- Shows deletion loading state for the selected session only.
+- Removes the deleted session from local state after successful Firestore deletion.
+- Keeps the session visible if deletion fails.
+- Shows an error message on failure.
+
+### Preserved
+
+Do not accidentally change:
+
+- Start
+- Pause
+- Resume
+- Lap
+- End
+- Named-session behavior
+- Session saving
+- Firestore collection structure
+- Authentication
+- Navigation
+
+The visible stopwatch control was manually renamed from **Reset** to **End** intentionally. Do not rename it back unless explicitly requested.
+
+---
+
+## 7. Important Source Files
+
+### Navigation
+- `src/navigation/AuthStack.tsx`
+- `src/navigation/MainTabs.tsx`
+
+### Services
+- `src/services/firebase.ts`
+- `src/services/authService.ts`
+- `src/services/userService.ts`
+- `src/services/expenseService.ts`
+- `src/services/budgetService.ts`
+- `src/services/sessionService.ts`
+- `src/services/storageService.ts`
+
+### Screens
+- `src/screens/auth/SplashScreen.tsx`
+- `src/screens/auth/WelcomeScreen.tsx`
+- `src/screens/auth/LoginScreen.tsx`
+- `src/screens/auth/SignUpScreen.tsx`
+- `src/screens/auth/ForgotPasswordScreen.tsx`
+- `src/screens/home/DashboardScreen.tsx`
+- `src/screens/expenses/ExpensesHistoryScreen.tsx`
+- `src/screens/expenses/AddExpenseScreen.tsx`
+- `src/screens/budget/BudgetManagementScreen.tsx`
+- `src/screens/stopwatch/StopwatchScreen.tsx`
+- `src/screens/profile/ProfileScreen.tsx`
+
+### Constants
+- `src/constants/colors.ts`
+- `src/constants/typography.ts`
+- `src/constants/spacing.ts`
+- `src/constants/categories.ts`
+
+---
+
+## 8. Firebase / Data Architecture
+
+### Authentication
+
+Firebase Authentication is the source of truth for authenticated users.
+
+Passwords are not stored in Firestore.
+
+### Firestore
+
+Important collections include:
+
+- `users/{uid}`
+- `users/{uid}/expenses`
+- `users/{uid}/sessions`
+- `users/{uid}/budget` / existing budget structure
+
+Username lookup uses the established username mapping.
+
+### Important Rule
+
+Keep Firebase/Firestore calls inside service files where possible. Do not move data operations into screens without a specific reason.
+
+---
+
+## 9. Testing / Verification
+
+### TypeScript
+
+Latest stopwatch session-deletion implementation:
+
+`npx tsc --noEmit` → **0 errors**
+
+### Android
+
+Physical Android testing was performed successfully.
+
+Verified latest stopwatch deletion flow:
+
+1. Saved session appears in history.
+2. Delete opens confirmation.
+3. Cancel keeps session.
+4. Confirm removes session.
+5. Deleted session remains deleted after reopening the app.
+6. Other sessions remain unaffected.
+7. Active stopwatch behavior remains functional.
+
+### Network Issue
+
+A Wi-Fi-specific Firebase/Firestore connectivity problem was observed:
+
+- The app could reach the Dashboard using mobile data.
+- The same app could fail to load Firebase/Firestore using a particular Wi-Fi network.
+- Mac connectivity tests showed Google/Firebase domains were reachable.
+- `firestore.googleapis.com` returning HTTP 404 at its root URL was determined not to be evidence that Firestore itself was unavailable; the root endpoint is not a normal Firestore data request.
+
+This was treated as a network-specific issue rather than an application-code failure and was intentionally left alone after mobile-data testing confirmed the application worked.
+
+---
+
+## 10. Git / Repository Status
+
+The project is maintained on GitHub using:
+
+`git add → git commit → git push`
+
+Latest source-code checkpoint was committed and pushed.
+
+Final verification showed:
+
+`nothing to commit, working tree clean`
+
+The final submission ZIP was created after excluding generated/unnecessary files.
+
+---
+
+## 11. Final Submission ZIP
+
+Final ZIP:
+
+`Timelytics_Final_Submission.zip`
+
+The clean ZIP was approximately **1.2 MB**.
+
+Excluded:
+
+- `node_modules/`
+- `.git/`
+- `.expo/`
+- `.env`
+- Android `.cxx/`
+- Android generated build directories
+- other generated/cache artifacts
+
+The ZIP contains the source project and required documentation.
+
+---
+
+## 12. Documentation
+
+Required competition documentation:
+
+- `AI_DEVELOPMENT_LOG.md`
+- This current context file
+
+The AI Development Log records significant AI interactions including:
+
+1. AI tool used
+2. Prompt/goal
+3. What AI generated/suggested
+4. What was actually used
+5. Manual changes
+6. Reasons for changes
+7. Testing/verification results
+
+Google Stitch must be recognized as part of the initial design process.
+
+---
+
+## 13. Development Rules for Future AI Sessions
+
+Before changing code:
+
+1. Read this context file.
+2. Read the relevant existing source files.
+3. Read `AI_DEVELOPMENT_LOG.md` when the task affects historical decisions or AI documentation.
+4. Inspect existing implementation before proposing changes.
+5. Do not invent missing architecture or data structures.
+6. Do not modify unrelated files.
+7. Do not install packages unless explicitly necessary and approved.
+8. Preserve existing Firebase/Auth/Firestore behavior.
+9. Preserve mandatory competition functionality.
+10. Test TypeScript and Android behavior where applicable.
+11. Update the AI Development Log after significant AI-assisted work.
+12. Do not create a `TIMELYTICS_HANDOFF.md` unless explicitly requested; this current context file is the master context.
+
+---
